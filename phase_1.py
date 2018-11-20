@@ -1,4 +1,11 @@
-#Last Edit : 05:11:18 14:58:21
+"""
+
+    #Last Edit : 21:11:18 02:35:21
+    mini log:
+            #added constraints for addition and deletion
+            #imporved bug for bool has no attribute 
+
+"""
 
 import copy #for deepcopy
 import math #for maths intensive operations
@@ -30,9 +37,14 @@ def initialize(raw_file):   #first function for parsing the input and getting al
         if 'INPUT' in line or 'OUTPUT' in line :
             adj[a]=[] #and we mark input or output nodes
 
+is_delete = False #for tracking if any node has come for deletion
+is_add = False #for tracking addition  
 Input=[]    #list for IP
 Output=[]
-DFF_list=[] #for storing the node associated with DFF 
+Add = []    #for addition of extra registers
+Del_1 = []  #for deletion of extra registers
+Del_2 = []
+DFF_list=[] #for storing the nodes associated with registeres
 DFF_CT = INPUT_CT = OUTPUT_CT = 0   #computational delays
 NOR_CT = NOT_CT = AND_CT = NAND_CT = OR_CT = 1
 NodeTypes={}    #the dictionary stores the type of each node
@@ -171,7 +183,7 @@ def floydWarshall(mat): #space O(n^2) and time n^2logn
                     mat[j][i] = mat[i][j] = mat[i][k] + mat[k][j]
     return mat
 
-def populate_w_matrix(mat):
+def populate_w_matrix(mat): #minimum registers in u,v
     n=len(mat[0])
     M=unit_time*n
     W_mat=[[0 for x in range(0,n)]for y in range(0,n)]
@@ -180,7 +192,7 @@ def populate_w_matrix(mat):
             W_mat[i][j] = math.ceil(mat[i][j]/M)
     return W_mat
 
-def populate_d_matrix(mat,W_mat,adj):
+def populate_d_matrix(mat,W_mat,adj): #max computational delay with weight(u, v)
     n=len(mat[0])
     M=unit_time*n
     D_mat=[[0 for x in range(0,n)]for y in range(0,n)]
@@ -192,24 +204,76 @@ def populate_d_matrix(mat,W_mat,adj):
                     D_mat[i][j]=W_mat[i][j]*M-mat[i][j]+node_CT[keys[j]]
     return D_mat
 
-def feasibility_constraints(W_mat,D_mat,mat,adjList,keys,c):
+def constraints(W_mat,D_mat,mat,adjList,keys,c):    #for handlig the constraints for retiming 
     inequalityDict={}
+    inequalityDict_F = {}
+
     for i in range(0,len(keys)):
         inequalityDict[keys[i]]=[]
 
-    for i in range(0,len(mat[0])):
+    """ 
+        Here we resolve 4 kind of constraints
+        Now we can have either deletion or additon
+        So we check for any one or none and then 
+        We add the constraints
+    """
+
+    #adding constraints for addition and deletion    
+    if(is_add):
+        #print "In addition "
+        for i in range(0,len(mat[0])):
+            for j in range(0,len(mat[0])):
+                u=keys[i]
+                v=keys[j]
+                var = 0
+                for k in range(0, len(Add)):
+                    if( Add[k] == v ):  #we check for the node after which it has to be added 
+                        var = 0
+                for k in range(0,len(adjList[keys[i]])):
+                    if(adjList[keys[i]][k][0] == keys[j]):
+                        inequalityDict[v].append( [u, adjList[keys[i]][k][4] + var  ] )
+    
+    elif(is_delete):
+        #print "In deletion "
+        for i in range(0,len(mat[0])):
+            for j in range(0,len(mat[0])):
+                u=keys[i]
+                v=keys[j]
+                var = 0
+                for k in range(0, len(Del_1)):
+                    #here we try to figure out the edge for adding constraints 
+                    if( (Del_1[k] == v and Del_2[k] == u) or (Del_1[k] == v or Del_2[k] == u ) ):
+                        var = 1
+                for k in range(0,len(adjList[keys[i]])):
+                    if(adjList[keys[i]][k][0]==keys[j]):
+                        inequalityDict[v].append( [u, adjList[keys[i]][k][4] + var ] )
+    
+    else:
+        #print "In no constraint "
+        #this is the normal retiming when we have no addition or deletion 
+        for i in range(0,len(mat[0])):
+            for j in range(0,len(mat[0])):
+                u=keys[i]
+                v=keys[j]
+                for k in range(0,len(adjList[keys[i]])):
+                    if(adjList[keys[i]][k][0]==keys[j]):
+                        inequalityDict[v].append( [u, adjList[keys[i]][k][4] ] )
+
+    #now we go for our conventional constraints 
+
+    for i in range(0,len(mat[0])):  #feasibility constraint
         for j in range(0,len(mat[0])):
             u=keys[i]
             v=keys[j]
             for k in range(0,len(adjList[keys[i]])):
-                if(adjList[keys[i]][k][0]==keys[j]):
-                    inequalityDict[v].append( [ u,adjList[keys[i]][k][4] ] )
+                if(adjList[keys[i]][k][0] < W_mat[i][j] ):
+                    inequalityDict_F[v].append( [u, adjList[keys[i]][k][4] ] )
 
-    for i in range(0,len(mat[0])):
+    for i in range(0,len(mat[0])):  #critical path constraint 
         for j in range(0,len(mat[0])):
             u=keys[i]
             v=keys[j]
-            if(D_mat[i][j]>c):
+            if(D_mat[i][j] > c):    #critical path constraint is being checked
                 flag=0
                 weight=W_mat[i][j]-1
                 if(inequalityDict[v]==[]):
@@ -221,7 +285,6 @@ def feasibility_constraints(W_mat,D_mat,mat,adjList,keys,c):
                             if(inequalityDict[v][k][1]>weight):
 
                                 inequalityDict[v][k][1]=weight
-
                     if(flag==0):
                         inequalityDict[v].append([ u, weight])
 
@@ -244,12 +307,12 @@ def feasibility_constraints(W_mat,D_mat,mat,adjList,keys,c):
             j=keys2.index(inequalityDict[entry][k][0])
             mat2[i][j]=inequalityDict[entry][k][1]
 
-    #the last element of the matrix is used as a source that is connected to every nnode by weight 1
+    #the last element of the matrix is used as a source that is connected to every node by weight 1
     for j in range(len(mat2[0])):
-        mat2[len(keys2)][j]=0
+        mat2[len(keys2)][j]=0   #this will act as an source for bellman ford algorithm 
     return  mat2
 
-def bellmanFord(mat,s):
+def bellmanFord(mat,s): #our single source shortest path algorithm of choice 
     d=[float('inf') for x in range(len(mat[0]))]
     d[len(mat[0])-1]=0
 
@@ -283,7 +346,7 @@ def bellmanFord_unpotimised(mat,s): #does n/2 more operations per iterations
 
     return d
 
-def finale_graph(arr,adj):
+def finale_graph(arr,adj):  #we remove the extra nodes added before 
     adjFinal=deep_copy(adj)
     for key, item in adjFinal.items():
         if key not in keys:
@@ -363,6 +426,11 @@ initialize(raw_file)
 #here we create the adj list corresponding to the list provided
 build_graph(raw_file)
 
+"""
+
+                Old logic for addition and deletion 
+                ```````````````````````````````````
+
 choice = int(raw_input("To add one or more registers press 1 else 0 : "))
 
 #here we increase the weight of the node to c so that a register gets added in order to break the 
@@ -375,9 +443,12 @@ if( choice == 1 ):
         choice -= 1
         ad = raw_input("Enter the node number " + str(cr) + " : ")
         for entry in adj:
-            for i in range(0, len(adj[entry])):
-                if(adj[entry][i][0]==ad):
+            if(entry == ad):
+                for i in range(0, len(adj[entry])):
                     adj[entry][i][4] = c 
+            #for i in range(0, len(adj[entry])):
+            #    if(adj[entry][i][0]==ad):
+            #        adj[entry][i][4] = c 
         cr += 1
         print "Successfully added a register after " + ad
 
@@ -407,6 +478,49 @@ if( choice == 1 ):
     #print entry, adj[entry]
     #size += 1
 
+            New logic has been implemented below
+            ````````````````````````````````````
+"""
+
+choice = int(raw_input("For deletion press 1 : For addition 2 : "))
+
+if ( choice == 1 ):
+    choice = int(raw_input("Enter the number of registers to be deleted "))
+    while(choice != 0):
+        choice -= 1
+        print ( "Enter the edge ")
+        e1 = raw_input("Enter the first node : ")
+        e2 = raw_input("Enter the second node : ")
+        cur = False
+        for entry in DFF_list:
+            if( e2 == entry ):
+                cur = True
+                Del_1.append(e1)    #we keep a recod of all the registers to be deleted here 
+                Del_2.append(e2)
+        if( cur == False ):
+            print "Node doesn't exist or registers do not exist "
+        if( cur ):
+            print "Node found with register, will be deleted : "
+        if( is_delete == False ):
+            is_delete = cur
+
+elif (choice == 2):
+    print("Welcome to register adding menu ")
+    choice = int(raw_input("Number of registers to be added : "))
+    cr = 1
+    while(choice != 0):
+        choice -= 1
+        ad = raw_input("Enter the node number " + str(cr) + " : ")
+        for entry in adj:
+            if(entry == ad):
+                for i in range(0, len(adj[entry])):
+                    adj[entry][i][4] += 1
+        Add.append(ad)  #we keep track of all the registers to be added
+        is_add = True
+        cr += 1
+        print "Successfully added a register after " + ad
+
+
 #print "Total nodes (Leaving input/output nodes) : " + str(size)
 start = time.time()
 
@@ -430,6 +544,7 @@ mat = form_adj_mat(adj)
 warshall_result=floydWarshall(mat)  #applying optimised warshall
 
 print("Populating D and W matrix | Time stamp : " + str(time.time()-start))
+
 #finding D and W matrix
 W_matrix=populate_w_matrix(warshall_result)
 D_matrix=populate_d_matrix(warshall_result, W_matrix, adj)
@@ -438,8 +553,20 @@ D_matrix=populate_d_matrix(warshall_result, W_matrix, adj)
 #here we change the code depending upon the value of c
 #print("Finding Graph inequalities | Time stamp : " + str(time.time()-start))
 #finding the graph by inequality
-InequalityMatrix=feasibility_constraints(W_matrix,D_matrix,mat,adjList,keys,c)
-ford_output=bellmanFord(InequalityMatrix,len(InequalityMatrix)-1)   #the last element of the matrix is the source of the bellmanFord
+
+"""
+    Here we can have 4 kinds of constraints  
+    1) critical path
+    2) feasibility 
+    3) constraint beacause of addition of registers
+    4) constraint because of deletion of registers
+    All of them have been taken care in cnstraints function
+"""
+
+InequalityMatrix=constraints(W_matrix,D_matrix,mat,adjList,keys,c)
+
+#the last element of the matrix is the source of the bellmanFord
+ford_output=bellmanFord(InequalityMatrix,len(InequalityMatrix)-1)   
 adjFinal=finale_graph(ford_output,adjList)
 
 #-------------------------------------------------------------------------
