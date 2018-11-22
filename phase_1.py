@@ -1,3 +1,5 @@
+#Pulling down for some modules for edit
+
 """
 
     #Last Edit : 21:11:18 02:35:21
@@ -221,17 +223,7 @@ def constraints(W_mat,D_mat,mat,adjList,keys,c):    #for handlig the constraints
     #adding constraints for addition and deletion    
     if(is_add):
         #print "In addition "
-        for i in range(0,len(mat[0])):
-            for j in range(0,len(mat[0])):
-                u=keys[i]
-                v=keys[j]
-                var = 0
-                for k in range(0, len(Add)):
-                    if( Add[k] == v ):  #we check for the node after which it has to be added 
-                        var = 0
-                for k in range(0,len(adjList[keys[i]])):
-                    if(adjList[keys[i]][k][0] == keys[j]):
-                        inequalityDict[v].append( [u, adjList[keys[i]][k][4] + var  ] )
+        #pulled
     
     elif(is_delete):
         #print "In deletion "
@@ -250,14 +242,7 @@ def constraints(W_mat,D_mat,mat,adjList,keys,c):    #for handlig the constraints
     
     else:
         #print "In no constraint "
-        #this is the normal retiming when we have no addition or deletion 
-        for i in range(0,len(mat[0])):
-            for j in range(0,len(mat[0])):
-                u=keys[i]
-                v=keys[j]
-                for k in range(0,len(adjList[keys[i]])):
-                    if(adjList[keys[i]][k][0]==keys[j]):
-                        inequalityDict[v].append( [u, adjList[keys[i]][k][4] ] )
+        #Pulled
 
     #now we go for our conventional constraints 
 
@@ -347,16 +332,7 @@ def bellmanFord_unpotimised(mat,s): #does n/2 more operations per iterations
     return d
 
 def finale_graph(arr,adj):  #we remove the extra nodes added before 
-    adjFinal=deep_copy(adj)
-    for key, item in adjFinal.items():
-        if key not in keys:
-            del adjFinal[key]
-
-    for entry in adjFinal:
-        for i in range(0,len(adjFinal[entry])):
-            adjFinal[entry][i][4]=adjFinal[entry][i][4]+arr[keys2.index(adjFinal[entry][i][0])]-arr[keys2.index(entry)]
-
-    return  adjFinal
+    #Pulled
 
 def print_to_file(INPUTS,OUTPUTS,dffs,GateList):
     FileP=open('output.txt','w')
