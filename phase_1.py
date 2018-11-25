@@ -2,8 +2,12 @@
 
     #Last Edit : 24:11:18 19:35:21
     mini log:
-            #added constraints for addition and deletion
             #imporved bug for bool has no attribute 
+            #Added critical path constraints 
+            #Added constraints for addition and deletion
+            #Added only addition or deletion at a time
+            #Added edge as input for deletion
+            #Added detection of registers for nodes given as input for register deletion 
 
 """
 
