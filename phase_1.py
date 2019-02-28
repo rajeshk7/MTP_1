@@ -50,7 +50,7 @@ Del_1 = []  #for deletion of extra registers
 Del_2 = []
 DFF_list=[] #for storing the nodes associated with registeres
 DFF_CT = INPUT_CT = OUTPUT_CT = 0   #computational delays
-NOR_CT = NOT_CT = AND_CT = NAND_CT = OR_CT = 1
+NOR_CT = NOT_CT = AND_CT = NAND_CT = OR_CT = 1 #assuming the delay to be one as of now 
 NodeTypes={}    #the dictionary stores the type of each node
 
 def build_graph(raw_file): #Here all the operations are getting filtered
